@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Secure Image-to-Audio Receiver</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#25e2f4",
+              "background-light": "#f5f8f8",
+              "background-dark": "#102122",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .signal-bar {
+            animation: none;
+            transition: height 0.3s ease;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col font-display">
+<!-- Header -->
+<header class="flex items-center justify-between p-4 border-b border-primary/10 bg-background-light dark:bg-background-dark sticky top-0 z-10">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+<h1 class="text-lg font-bold tracking-tight">Receiver: <span class="text-primary/80">Secure Decode</span></h1>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">shield_lock</span>
+<span class="text-xs font-medium uppercase tracking-widest text-primary/60">Encrypted Channel</span>
+</div>
+</header>
+<main class="flex-1 flex flex-col gap-6 p-4 max-w-2xl mx-auto w-full pb-24">
+<!-- Progress Steps -->
+<div class="grid grid-cols-[40px_1fr] gap-x-2">
+<div class="flex flex-col items-center gap-1 pt-1">
+<div class="flex items-center justify-center size-8 rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-xl">check_circle</span>
+</div>
+<div class="w-[2px] bg-primary h-8"></div>
+</div>
+<div class="flex flex-col pb-6">
+<p class="font-semibold text-sm">Step 1: Import Audio</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs">Audio source verified and loaded</p>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="flex items-center justify-center size-8 rounded-full bg-primary text-background-dark">
+<span class="material-symbols-outlined text-xl">analytics</span>
+</div>
+<div class="w-[2px] bg-slate-700 dark:bg-slate-800 h-8"></div>
+</div>
+<div class="flex flex-col pb-6">
+<p class="font-semibold text-sm text-primary">Step 2: Decode Signal</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs">Extracting image data from frequency waves</p>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="flex items-center justify-center size-8 rounded-full border border-slate-700 dark:border-slate-800 text-slate-500">
+<span class="material-symbols-outlined text-xl">lock_open</span>
+</div>
+</div>
+<div class="flex flex-col">
+<p class="font-semibold text-sm text-slate-500">Step 3: Decrypt Image</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs">Awaiting full signal extraction</p>
+</div>
+</div>
+<!-- Upload & Drop Area -->
+<div class="flex flex-col p-6 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 items-center justify-center text-center gap-4">
+<div class="size-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+<span class="material-symbols-outlined text-primary text-4xl">upload_file</span>
+</div>
+<div>
+<h3 class="text-lg font-bold">Signal Source</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">Selected: <span class="text-primary font-mono">X-AERO-SIGNAL_08.wav</span></p>
+</div>
+<button class="bg-primary text-background-dark px-6 py-2 rounded-lg font-bold text-sm hover:brightness-110 transition-all">
+                Change Source
+            </button>
+</div>
+<!-- Real-time Signal Visualization -->
+<div class="bg-slate-900/50 dark:bg-slate-900/50 rounded-xl p-4 border border-primary/10">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-xs font-bold uppercase tracking-widest text-primary/70">Frequency Spectrum Analysis</h3>
+<span class="text-[10px] font-mono text-primary/50">44.1kHz | 24-bit</span>
+</div>
+<div class="flex items-end justify-between h-24 gap-1">
+<div class="bg-primary/40 w-full h-[60%] rounded-t-sm"></div>
+<div class="bg-primary/60 w-full h-[40%] rounded-t-sm"></div>
+<div class="bg-primary/80 w-full h-[85%] rounded-t-sm"></div>
+<div class="bg-primary/50 w-full h-[25%] rounded-t-sm"></div>
+<div class="bg-primary w-full h-[95%] rounded-t-sm"></div>
+<div class="bg-primary/70 w-full h-[55%] rounded-t-sm"></div>
+<div class="bg-primary/90 w-full h-[75%] rounded-t-sm"></div>
+<div class="bg-primary/40 w-full h-[35%] rounded-t-sm"></div>
+<div class="bg-primary/60 w-full h-[65%] rounded-t-sm"></div>
+<div class="bg-primary/50 w-full h-[45%] rounded-t-sm"></div>
+<div class="bg-primary/80 w-full h-[90%] rounded-t-sm"></div>
+<div class="bg-primary w-full h-[20%] rounded-t-sm"></div>
+<div class="bg-primary/70 w-full h-[50%] rounded-t-sm"></div>
+<div class="bg-primary/40 w-full h-[80%] rounded-t-sm"></div>
+<div class="bg-primary/60 w-full h-[30%] rounded-t-sm"></div>
+<div class="bg-primary/50 w-full h-[70%] rounded-t-sm"></div>
+</div>
+</div>
+<!-- Reconstructed Image Preview -->
+<div class="flex flex-col gap-3">
+<h3 class="text-sm font-bold uppercase tracking-widest text-slate-400">Reconstructed Image Preview</h3>
+<div class="relative aspect-square w-full rounded-xl overflow-hidden border border-primary/20 bg-slate-900/40 group">
+<!-- Placeholder/Blurred Image -->
+<div class="absolute inset-0 flex items-center justify-center bg-background-dark/80 backdrop-blur-xl z-[1]">
+<div class="flex flex-col items-center gap-2">
+<span class="material-symbols-outlined text-primary/40 text-6xl">leak_add</span>
+<p class="text-sm font-medium text-primary/60">Processing Data Packets...</p>
+</div>
+</div>
+<div class="w-full h-full bg-gradient-to-br from-primary/10 via-background-dark to-primary/5"></div>
+<!-- Decryption Overlay Information -->
+<div class="absolute bottom-0 left-0 right-0 p-4 z-[2] bg-gradient-to-t from-background-dark/90 to-transparent">
+<div class="flex justify-between items-end">
+<div class="flex flex-col gap-1">
+<span class="text-[10px] uppercase font-bold text-primary/70">Progress</span>
+<div class="w-48 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[64%]"></div>
+</div>
+</div>
+<span class="text-xl font-mono font-bold text-primary">64%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex flex-col gap-3">
+<button class="w-full bg-primary/20 text-primary border border-primary/30 py-4 rounded-xl font-bold flex items-center justify-center gap-2 cursor-not-allowed opacity-50">
+<span class="material-symbols-outlined">download</span>
+                Save Decoded Image
+            </button>
+<p class="text-[10px] text-center text-slate-500 uppercase tracking-tighter italic">Encryption Key: RSA-4096-AES-GCM-VERIFIED</p>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 bg-background-light dark:bg-background-dark border-t border-primary/10 flex justify-around items-center h-16 px-4 pb-2 z-20">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined">radio</span>
+<span class="text-[10px] font-medium">Receiver</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="text-[10px] font-medium">History</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</a>
+</nav>
+</body></html>
