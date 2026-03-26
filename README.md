@@ -1,104 +1,94 @@
-# VisioLock++
+# VisioLock++ (v2.0)
 
-VisioLock++ is a Flutter app for AI-powered adaptive secure cross-media transmission. It converts encrypted content into modulated signals, transmits them over audio channels, and reconstructs the original content on the receiver side with intelligent parameter selection.
+**A Cognitive Acoustic Communication System with AI-Optimized Modulation and Hybrid Encryption.**
 
-The app uses a pre-trained Random Forest ML model to analyze channel conditions and file properties, automatically selecting optimal encoding, error correction, and modulation schemes for reliable transmission.
+VisioLock++ is a next-generation Flutter application that enables secure, air-gapped data transmission between devices using sound waves. Unlike traditional acoustic modems with fixed parameters, VisioLock++ utilizes an on-device AI (TensorFlow Lite) to analyze environmental noise in real-time and adapt its transmission strategy—switching modulation schemes, error correction rates, and encryption protocols to ensure reliability in any environment.
 
-## Core Workflow
+---
 
-1. Sender analyzes file properties and channel conditions
-2. AI model predicts optimal transmission parameters
-3. File payload is encrypted and FEC-protected based on AI recommendations
-4. Data is modulated into audio and exported as WAV
-5. Receiver imports WAV, demodulates, decrypts, and reconstructs the original content
+## 🚀 Key Features (v2.0)
 
-## Features
+### 🧠 AI-Optimized Adaptive Modulation
+- **Cognitive Decision Engine**: A lightweight MLP neural network runs on-device (TFLite) to analyze Channel State Information (SNR, Noise Floor).
+- **Dynamic Switching**: Automatically selects the optimal balance between speed and reliability:
+    - **High SNR (>25dB)**: 16-QAM + AES-256-GCM (High Speed)
+    - **Medium SNR**: 8-PSK + RS(255, 223)
+    - **Low SNR (<10dB)**: BFSK + SAIC-ACT + 3x Repetition (Maximum Reliability)
 
-- **AI-Powered Parameter Selection**: Random Forest model analyzes {file_type, size, SNR, noise_level} for optimal config
-- **Multi-format Support**: Images, audio, video, and text files
-- **Adaptive Transmission**: Real-time channel estimation with dynamic parameter adjustment
-- **Advanced Encryption**: AES-128 and AES-256 with enhanced key derivation
-- **Robust Error Correction**: Reed-Solomon and convolutional codes
-- **Flexible Modulation**: 16-QAM, 64-QAM, 256-QAM schemes
-- **Fallback Logic**: Rule-based configuration if AI server unavailable
-- **Cross-Platform**: Runs on Android, iOS, Web, Windows, macOS, Linux
+### 📦 Multi-File Support (I2A3++ Protocol)
+- **Batch Transmission**: Send mixed content (images, PDFs, JSON, text) in a single stream.
+- **Robust Framing**: New **I2A3++** protocol allows for partial recovery of files even if some frames are corrupted.
+- **Metadata Encapsulation**: Preserves filenames, types, and sizes across the air-gap.
 
-## Tech Stack
+### 🛡️ Hybrid Security Architecture
+- **Biometric Binding**: Encryption keys are derived from hardware-backed biometric secrets (fingerprint/FaceID) coupled with a PIN.
+- **SAIC-ACT (Spectrogram Adaptive Image Cipher)**: A custom stream cipher designed for hostile acoustic environments. It shapes the ciphertext to minimize "destructive interference" patterns (like `000` or `111` sequences) in the analog signal.
+- **AES-256-GCM**: Industry-standard authenticated encryption for high-throughput scenarios.
 
-- **Frontend**: Flutter / Dart
-- **Backend**: Flask API (Python) with scikit-learn ML model
-- **Encryption**: AES (crypto package)
-- **Error Correction**: Reed-Solomon, convolutional codes
-- **Modulation**: FSK, QAM with Goertzel demodulation
-- **Machine Learning**: Random Forest Classifier (>80% accuracy)
+---
 
-## Requirements
+## 🛠️ Tech Stack
 
-- Flutter SDK (3.9.2+)
-- Dart SDK (via Flutter)
-- Android SDK / Android Studio (for Android builds)
-- Python 3.8+ with Flask, scikit-learn, pandas, joblib (for AI backend)
+- **Frontend**: Flutter 3.19+ (Dart)
+- **AI Engine**: TensorFlow Lite (Python training, Dart inference)
+- **Audio DSP**: Custom Dart FFI + `flutter_sound`
+- **State Management**: Riverpod 2.0
+- **Cryptography**: PointyCastle + Android Keystore + `cryptography`
 
-## Quick Start
+---
 
-### 1. Setup Flutter App
+## 🏗️ System Architecture
+
+The app operates in a closed loop:
+
+1.  **Sensing**: Microphone captures ambient noise signature.
+2.  **Inference**: TFLite model predicts the Packet Error Rate (PER) for various configurations.
+3.  **Selection**: System picks the highest-throughput configuration that satisfies reliability thresholds.
+4.  **Transmission**: Data is encrypted, framed (I2A3++), modulated, and played via audio channels.
+
+---
+
+## 📥 Installation
+
+### Prerequisites
+- Flutter SDK (3.19+)
+- Python 3.9+ (Only for retraining models, not for running the app)
+- Android Studio / Xcode
+
+### Build & Run
 ```bash
+# 1. Get dependencies
 flutter pub get
-flutter run
+
+# 2. Run on device (Emulator microphone support is limited)
+flutter run --release
 ```
 
-### 2. Start AI Model Server (in model_for_visolock directory)
-```bash
-pip install flask joblib scikit-learn pandas numpy
-python app.py
-```
+*Note: The TFLite model is already bundled in `assets/models/`. You do not need to run a Python server.*
 
-Server runs on `http://127.0.0.1:5000` (or `http://10.0.2.2:5000` for Android emulator)
+---
 
-## Build APK
+## 🧪 Documentation
 
-```bash
-flutter build apk
-```
+Detailed guides are available in the repository:
 
-Release APK output: `build/app/outputs/flutter-apk/app-release.apk`
+- **[paper.md](paper.md)**: Full academic paper describing the theoretical framework.
+- **[MULTI_FILE_ENCRYPTION_GUIDE.md](MULTI_FILE_ENCRYPTION_GUIDE.md)**: Details on the I2A3++ protocol and file batching.
+- **[AI_INTEGRATION_GUIDE.md](AI_INTEGRATION_GUIDE.md)**: How the TFLite model was trained and integrated.
+- **[TESTING_ENCRYPTION_METHODS.md](TESTING_ENCRYPTION_METHODS.md)**: Benchmarks of AES-GCM vs. SAIC-ACT.
 
-## AI Integration
+---
 
-The app integrates a pre-trained ML model for adaptive transmission:
+## 🤝 Contributing
 
-- **Model Type**: scikit-learn Random Forest Classifier
-- **Input Features**: file_type, file_size_kb, snr, noise_level
-- **Output**: Optimal {encoding, coding, modulation}
-- **Accuracy**: >80% on validation set
-- **API**: RESTful endpoint POST `/predict` with JSON I/O
+1.  Fork the repository.
+2.  Create your feature branch (`git checkout -b feature/amazing-feature`).
+3.  Commit your changes (`git commit -m 'Add some amazing feature'`).
+4.  Push to the branch (`git push origin feature/amazing-feature`).
+5.  Open a Pull Request.
 
-See [AI_INTEGRATION_GUIDE.md](AI_INTEGRATION_GUIDE.md) for detailed setup and usage.
+---
 
-## Architecture
+## 📄 License
 
-## Release Process
-
-This repository includes automated GitHub release publishing via:
-
-- `.github/workflows/release.yml`
-
-When a tag matching `v*` is pushed, GitHub Actions creates a release and attaches the latest APK found in `release/*.apk`.
-
-Typical release steps:
-
-1. Build the app: `flutter build apk`
-2. Copy APK to versioned file (example): `release/app-release-v1.0.2.apk`
-3. Commit changes
-4. Create tag: `git tag -a v1.0.2 -m "VisioLock v1.0.2"`
-5. Push: `git push origin main --follow-tags`
-
-## Current Published Artifacts
-
-- `release/app-release-v1.0.0.apk`
-- `release/app-release-v1.0.1.apk`
-
-## Notes
-
-- Exported WAV and decoded image files are stored in the app documents directory.
-- On Android 13+, media read permissions are requested when selecting image/audio files.
+Distributed under the MIT License. See `LICENSE` for more information.
