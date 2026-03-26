@@ -4,6 +4,7 @@ import 'history_screen.dart';
 import 'receiver_screen.dart';
 import 'settings_screen.dart';
 import 'sender_screen.dart';
+import 'visiolock_sender_screen.dart';
 import '../utils/app_colors.dart';
 import '../utils/color_extensions.dart';
 import '../utils/ui_decorations.dart';
@@ -145,8 +146,18 @@ class HomeScreen extends StatelessWidget {
                               const SizedBox(height: 24),
                               _ActionButton(
                                 filled: true,
-                                icon: Icons.upload_file,
-                                label: 'Send Secure Image',
+                                icon: Icons.description_outlined,
+                                label: 'Secure File',
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  VisiolockSenderScreen.routeName,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _ActionButton(
+                                filled: false,
+                                icon: Icons.image_outlined,
+                                label: 'Legacy Image Transfer',
                                 onTap: () => Navigator.pushNamed(
                                   context,
                                   SenderScreen.routeName,

@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:image_to_audio/services/error_correction_service.dart';
-import 'package:image_to_audio/services/noise_resistant_transmission_service.dart';
+import 'package:visiolock_nextgen/services/error_correction_service.dart';
+import 'package:visiolock_nextgen/services/noise_resistant_transmission_service.dart';
 
 void main() {
   test('Reed–Solomon FEC round-trips with correctable symbol errors', () {

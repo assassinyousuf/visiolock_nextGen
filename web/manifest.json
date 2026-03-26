@@ -1,11 +1,11 @@
 {
-    "name": "image_to_audio",
-    "short_name": "image_to_audio",
+    "name": "VisioLock++",
+    "short_name": "VisioLock++",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "VisioLock++ — AI-Powered Adaptive Secure Cross-Media Transmission Framework.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

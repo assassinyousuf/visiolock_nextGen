@@ -32,6 +32,13 @@ class SenderScreen extends StatefulWidget {
 }
 
 class _SenderScreenState extends State<SenderScreen> {
+  static const Set<String> _supportedExtensions = {
+    'png', 'jpg', 'jpeg', 'bmp', 'gif', 'webp',
+    'txt', 'md', 'json', 'xml', 'csv',
+    'pdf',
+    'zip', 'bin', 'exe', 'dat',
+  };
+
   final ImageProcessor _imageProcessor = ImageProcessor();
   final BiometricAuthService _biometricAuth = BiometricAuthService();
   final BiometricKeyService _biometricKeyService = BiometricKeyService();
@@ -50,7 +57,7 @@ class _SenderScreenState extends State<SenderScreen> {
 
   bool _busy = false;
 
-  File? _selectedImage;
+  File? _selectedFile;
   Uint8List? _encryptedBytes;
   AudioPacket? _audioPacket;
   File? _savedAudioFile;
@@ -78,11 +85,11 @@ class _SenderScreenState extends State<SenderScreen> {
     16,
   ];
 
-  Future<void> _pickImage() async {
+  Future<void> _pickFile() async {
     await PermissionService.requestImagePickerPermissions();
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['png', 'jpg', 'jpeg', 'bmp', 'webp'],
+      type: FileType.any,
+      allowMultiple: false,
     );
 
     if (!mounted) return;
@@ -92,8 +99,14 @@ class _SenderScreenState extends State<SenderScreen> {
       return;
     }
 
+    final extension = path.split('.').last.toLowerCase();
+    if (!_supportedExtensions.contains(extension)) {
+      _showSnackBar('Unsupported .$extension file. Please select supported file types.');
+      return;
+    }
+
     setState(() {
-      _selectedImage = File(path);
+      _selectedFile = File(path);
       _encryptedBytes = null;
       _audioPacket = null;
       _savedAudioFile = null;
@@ -106,10 +119,10 @@ class _SenderScreenState extends State<SenderScreen> {
     super.dispose();
   }
 
-  Future<void> _encryptImage() async {
-    final imageFile = _selectedImage;
-    if (imageFile == null) {
-      _showSnackBar('Select an image first.');
+  Future<void> _encryptFile() async {
+    final selectedFile = _selectedFile;
+    if (selectedFile == null) {
+      _showSnackBar('Select a file first.');
       return;
     }
 
@@ -121,7 +134,7 @@ class _SenderScreenState extends State<SenderScreen> {
 
     setState(() => _busy = true);
     try {
-      final payload = await _imageProcessor.convertImageToBinary(imageFile);
+      final payload = await _imageProcessor.convertImageToBinary(selectedFile);
 
       final Uint8List key;
       if (_crossDevice) {
@@ -153,7 +166,7 @@ class _SenderScreenState extends State<SenderScreen> {
         _audioPacket = null;
         _savedAudioFile = null;
       });
-      _showSnackBar('Image encrypted.');
+      _showSnackBar('File encrypted.');
     } catch (e) {
       _showSnackBar('Encryption failed: $e');
     } finally {
@@ -285,12 +298,12 @@ class _SenderScreenState extends State<SenderScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final muted = isDark ? AppColors.slate400 : AppColors.slate600;
 
-    final step1Done = _selectedImage != null;
+    final step1Done = _selectedFile != null;
     final step2Done = _encryptedBytes != null;
     final step3Done = _audioPacket != null;
     final activeStep = !step1Done ? 1 : (!step2Done ? 2 : (!step3Done ? 3 : 3));
 
-    final canEncrypt = !_busy && _selectedImage != null;
+    final canEncrypt = !_busy && _selectedFile != null;
     final canEncode = !_busy && _encryptedBytes != null;
     final canExport = !_busy && _audioPacket != null;
 
@@ -380,14 +393,6 @@ class _SenderScreenState extends State<SenderScreen> {
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
-                                if (_selectedImage != null)
-                                  Opacity(
-                                    opacity: 0.40,
-                                    child: Image.file(
-                                      _selectedImage!,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
                                 Center(
                                   child: Padding(
                                     padding: const EdgeInsets.all(20),
@@ -402,16 +407,16 @@ class _SenderScreenState extends State<SenderScreen> {
                                             shape: BoxShape.circle,
                                           ),
                                           child: Icon(
-                                            Icons.add_photo_alternate,
+                                            Icons.insert_drive_file,
                                             size: 44,
                                             color: primary,
                                           ),
                                         ),
                                         const SizedBox(height: 12),
                                         Text(
-                                          _selectedImage == null
-                                              ? 'No Image Selected'
-                                              : 'Selected: ${_fileName(_selectedImage)}',
+                                          _selectedFile == null
+                                              ? 'No File Selected'
+                                              : 'Selected: ${_fileName(_selectedFile)}',
                                           textAlign: TextAlign.center,
                                           style: TextStyle(
                                             fontSize: 18,
@@ -423,8 +428,8 @@ class _SenderScreenState extends State<SenderScreen> {
                                         ),
                                         const SizedBox(height: 8),
                                         Text(
-                                          _selectedImage == null
-                                              ? 'Select an image to begin the secure encryption process.'
+                                          _selectedFile == null
+                                            ? 'Select a supported file to begin secure encryption.'
                                               : 'Ready to verify fingerprint and encrypt.',
                                           textAlign: TextAlign.center,
                                           style: TextStyle(
@@ -435,7 +440,7 @@ class _SenderScreenState extends State<SenderScreen> {
                                         ),
                                         const SizedBox(height: 16),
                                         FilledButton(
-                                          onPressed: _busy ? null : _pickImage,
+                                          onPressed: _busy ? null : _pickFile,
                                           style: FilledButton.styleFrom(
                                             backgroundColor: primary,
                                             foregroundColor:
@@ -447,7 +452,7 @@ class _SenderScreenState extends State<SenderScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            'Select Image',
+                                            'Select File',
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -510,7 +515,7 @@ class _SenderScreenState extends State<SenderScreen> {
                               ),
                               Switch(
                                 value: _crossDevice,
-                                activeColor: primary,
+                                activeThumbColor: primary,
                                 onChanged: (v) => setState(() {
                                   _crossDevice = v;
                                   _pinController.clear();
@@ -599,7 +604,7 @@ class _SenderScreenState extends State<SenderScreen> {
                                     ? Icons.lock_open
                                     : Icons.fingerprint,
                                 label: _crossDevice ? 'Encrypt' : 'Fingerprint',
-                                onTap: _encryptImage,
+                                onTap: _encryptFile,
                               ),
                             ),
                             const SizedBox(width: 12),

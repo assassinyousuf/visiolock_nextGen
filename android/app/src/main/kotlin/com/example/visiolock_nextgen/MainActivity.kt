@@ -1,4 +1,4 @@
-package com.example.image_to_audio
+package com.example.visiolock_nextgen
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

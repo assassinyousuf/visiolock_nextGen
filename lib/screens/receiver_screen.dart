@@ -15,6 +15,7 @@ import '../services/combined_key_service.dart';
 import '../services/encryption_service.dart';
 import '../services/history_service.dart';
 import '../services/image_reconstructor.dart';
+import '../services/multi_file_framing_service.dart';
 import '../services/noise_resistant_transmission_service.dart';
 import '../services/passphrase_key_service.dart';
 import '../services/permission_service.dart';
@@ -40,6 +41,7 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
   final EncryptionService _encryptionService = EncryptionService();
   final ImageReconstructor _imageReconstructor = ImageReconstructor();
   final HistoryService _history = HistoryService();
+  final MultiFileFramingService _framingService = MultiFileFramingService();
   final NoiseResistantTransmissionService _nrsts =
       NoiseResistantTransmissionService();
 
@@ -51,7 +53,13 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
   File? _audioFile;
   bool _signalDecoded = false;
   bool _payloadDecrypted = false;
+  
+  // Single file result (legacy/classic)
   Uint8List? _pngBytes;
+  
+  // Multi-file result
+  List<File> _decodedFiles = [];
+
   String? _decodedExtension;
   String? _payloadMagic;
   bool _integrityVerified = false;
@@ -100,6 +108,7 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
       _signalDecoded = false;
       _payloadDecrypted = false;
       _pngBytes = null;
+      _decodedFiles = [];
       _decodedExtension = null;
       _payloadMagic = null;
       _integrityVerified = false;
@@ -116,7 +125,9 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
 
     final pin = _pinController.text;
     if (pin.trim().isEmpty) {
-      _showSnackBar('Enter a PIN first.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a PIN first.')),
+      );
       return;
     }
 
@@ -130,7 +141,9 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
           reason: 'Verify your fingerprint to decrypt this audio.',
         );
         if (!authed) {
-          _showSnackBar('Fingerprint authentication cancelled.');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Fingerprint authentication cancelled.')),
+          );
           return;
         }
         final biometricKey =
@@ -158,6 +171,8 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
       ];
 
       Object? lastError;
+      bool success = false;
+
       for (final a in attempts) {
         try {
           final rawBytes = await _audioDecoder.decodeAudioToBytes(
@@ -166,11 +181,47 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
             frequency0HzOverride: a.f0,
             frequency1HzOverride: a.f1,
           );
+          
           final recoveredEncryptedBytes = _nrsts.recoverEncryptedBytes(rawBytes);
           final decryptedBytes = _encryptionService.decryptBytes(
             encryptedBytes: recoveredEncryptedBytes,
             key: key,
           );
+
+          // 1. Try Multi-File Decoding
+          try {
+            final frames = _framingService.deserializeFrames(decryptedBytes);
+            if (frames.isNotEmpty) {
+              final docDir = await getApplicationDocumentsDirectory();
+              final batchId = DateTime.now().millisecondsSinceEpoch;
+              final outDir = Directory('${docDir.path}/decoded_batch_$batchId');
+              if (!outDir.existsSync()) {
+                outDir.createSync(recursive: true);
+              }
+
+              final files = await _framingService.reconstructFilesFromFrames(frames, outDir.path);
+
+              if (!mounted) return;
+              setState(() {
+                _signalDecoded = true;
+                _payloadDecrypted = true;
+                _decodedFiles = files;
+                _payloadMagic = 'BATCH';
+                _integrityVerified = true;
+                _pngBytes = null; // Clear single file data
+              });
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Decoded batch: ${files.length} files recovered.')),
+              );
+              success = true;
+              break;
+            }
+          } catch (_) {
+            // Not a multi-file frame, continue to single file check
+          }
+
+          // 2. Fallback to Single Image/Legacy
           final decodedImage =
               _imageReconstructor.reconstructImageFromPayloadBytes(decryptedBytes);
 
@@ -179,34 +230,42 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
             _signalDecoded = true;
             _payloadDecrypted = true;
             _pngBytes = decodedImage.bytes;
+            _decodedFiles = [];
             _decodedExtension = decodedImage.extension;
             _payloadMagic = decodedImage.payloadMagic;
             _integrityVerified = decodedImage.integrityVerified;
           });
 
-          final suffix = a.tag.isEmpty ? '' : ', ${a.tag}';
-          if (decodedImage.integrityVerified) {
-            _showSnackBar(
-              'Image reconstructed (lossless verified$suffix, ${decodedImage.bytes.length} bytes).',
-            );
-          } else if (decodedImage.payloadMagic == 'I2A2') {
-            _showSnackBar(
-              'Image reconstructed (lossless, unverified$suffix, ${decodedImage.bytes.length} bytes).',
-            );
-          } else {
-            _showSnackBar(
-              'Decoded legacy audio (I2A1$suffix, ${decodedImage.bytes.length} bytes). Re-encode with updated Sender for full quality.',
-            );
-          }
-          return;
+          final suffix = a.tag.isEmpty ? '' : ' (${a.tag})';
+           ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                decodedImage.integrityVerified
+                  ? 'File reconstructed (lossless verified$suffix, ${decodedImage.bytes.length} bytes).'
+                  : 'File reconstructed (unverified$suffix, ${decodedImage.bytes.length} bytes).',
+              ),
+            ),
+          );
+          
+          success = true;
+          break;
+
         } catch (e) {
           lastError = e;
+          // Continue to next attempt
         }
       }
 
-      throw lastError ?? const FormatException('Receiver failed to decode.');
+      if (!success) {
+        throw lastError ?? const FormatException('Failed to decode with all parameter sets.');
+      }
+
     } catch (e) {
-      _showSnackBar('Receiver failed: $e');
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Receiver failed: $e')),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -215,10 +274,18 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
   }
 
   Future<void> _saveDecodedImage() async {
-    final png = _pngBytes;
-    if (png == null) {
+    // If multiple files, they are already saved to temp dir by reconstructFilesFromFrames
+    // We can move them or just open the folder in a real app.
+    // For single file legacy, we save manually.
+    
+    if (_decodedFiles.isNotEmpty) {
+      // Just notify user where they are
+      _showSnackBar('Batch files already extracted to: ${_decodedFiles.first.parent.path}');
       return;
     }
+
+    final png = _pngBytes;
+    if (png == null) return;
 
     setState(() => _busy = true);
     try {
@@ -292,9 +359,10 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
     final step2Done = _signalDecoded;
     final step3Done = _payloadDecrypted;
 
-    final canSave = !_busy && _pngBytes != null;
+    final hasContent = _pngBytes != null || _decodedFiles.isNotEmpty;
+    final canSave = !_busy && hasContent;
 
-    final progress = _pngBytes != null
+    final progress = hasContent
       ? 1.0
       : (_payloadDecrypted
           ? 0.80
@@ -471,7 +539,7 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
                               ),
                               Switch(
                                 value: _crossDevice,
-                                activeColor: primary,
+                                activeThumbColor: primary,
                                 onChanged: (v) => setState(() {
                                   _crossDevice = v;
                                   _pinController.clear();
@@ -632,7 +700,7 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
                         Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            'Reconstructed Image Preview'.toUpperCase(),
+                            (_decodedFiles.isNotEmpty ? 'Global Decoded Content' : 'Reconstructed Image Preview').toUpperCase(),
                             style: TextStyle(
                               color: isDark
                                   ? AppColors.slate400
@@ -670,9 +738,35 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
                                     ),
                                   ),
                                 ),
+                                if (_decodedFiles.isNotEmpty)
+                                  ListView.builder(
+                                    padding: const EdgeInsets.all(8),
+                                    itemCount: _decodedFiles.length,
+                                    itemBuilder: (context, index) {
+                                      final f = _decodedFiles[index];
+                                      final name = f.path.split(Platform.pathSeparator).last;
+                                      return Card(
+                                        color: AppColors.slate900.withOpacity01(0.5),
+                                        margin: const EdgeInsets.symmetric(vertical: 4),
+                                        child: ListTile(
+                                          leading: Icon(Icons.insert_drive_file, color: primary),
+                                          title: Text(
+                                            name,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: isDark ? Colors.white : AppColors.slate900,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          dense: true,
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 if (_pngBytes != null)
                                   Image.memory(_pngBytes!, fit: BoxFit.contain),
-                                if (_pngBytes == null)
+                                if (_pngBytes == null && _decodedFiles.isEmpty)
                                   Container(
                                     color: AppColors.backgroundDark
                                         .withOpacity01(0.80),
@@ -791,10 +885,15 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.download, color: primary),
+                                  Icon(
+                                    _decodedFiles.isNotEmpty ? Icons.folder_open : Icons.download,
+                                    color: primary,
+                                  ),
                                   const SizedBox(width: 10),
                                   Text(
-                                    'Save Decoded Image',
+                                    _decodedFiles.isNotEmpty
+                                        ? 'Batch Saved (Tap for Info)'
+                                        : 'Save Decoded Image',
                                     style: TextStyle(
                                       color: primary,
                                       fontWeight: FontWeight.bold,

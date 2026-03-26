@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'screens/history_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/receiver_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/sender_screen.dart';
+import 'screens/visiolock_configuration_screen.dart';
+import 'screens/visiolock_prediction_screen.dart';
+import 'screens/visiolock_results_screen.dart';
+import 'screens/visiolock_sender_screen.dart';
 import 'utils/app_colors.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -36,7 +41,7 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'VisioLock',
+      title: 'VisioLock++',
       theme: ThemeData(
         colorScheme: lightScheme,
         scaffoldBackgroundColor: AppColors.backgroundLight,
@@ -63,6 +68,12 @@ class MyApp extends StatelessWidget {
         ReceiverScreen.routeName: (_) => const ReceiverScreen(),
         HistoryScreen.routeName: (_) => const HistoryScreen(),
         SettingsScreen.routeName: (_) => const SettingsScreen(),
+        VisiolockSenderScreen.routeName: (_) => const VisiolockSenderScreen(),
+        VisiolockConfigurationScreen.routeName: (_) =>
+            const VisiolockConfigurationScreen(),
+        VisiolockPredictionScreen.routeName: (_) =>
+            const VisiolockPredictionScreen(),
+        VisiolockResultsScreen.routeName: (_) => const VisiolockResultsScreen(),
       },
     );
   }

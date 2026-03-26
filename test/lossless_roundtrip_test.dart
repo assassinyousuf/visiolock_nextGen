@@ -4,14 +4,14 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
-import 'package:image_to_audio/services/audio_decoder.dart';
-import 'package:image_to_audio/services/audio_encoder.dart';
-import 'package:image_to_audio/services/combined_key_service.dart';
-import 'package:image_to_audio/services/encryption_service.dart';
-import 'package:image_to_audio/services/image_processor.dart';
-import 'package:image_to_audio/services/image_reconstructor.dart';
-import 'package:image_to_audio/services/noise_resistant_transmission_service.dart';
-import 'package:image_to_audio/utils/binary_converter.dart';
+import 'package:visiolock_nextgen/services/audio_decoder.dart';
+import 'package:visiolock_nextgen/services/audio_encoder.dart';
+import 'package:visiolock_nextgen/services/combined_key_service.dart';
+import 'package:visiolock_nextgen/services/encryption_service.dart';
+import 'package:visiolock_nextgen/services/image_processor.dart';
+import 'package:visiolock_nextgen/services/image_reconstructor.dart';
+import 'package:visiolock_nextgen/services/noise_resistant_transmission_service.dart';
+import 'package:visiolock_nextgen/utils/binary_converter.dart';
 
 void main() {
   // ──────────────────────────────────────────────────────────────

@@ -208,3 +208,178 @@ class EncryptionService {
     if (key.isEmpty) throw ArgumentError('Encryption key must not be empty.');
   }
 }
+
+/// Enhanced Encryption Service — SAIC-ACT with additional security layers
+///
+/// Improvements over base SAIC-ACT:
+/// 1. Multi-round encryption support
+/// 2. Salt integration for additional entropy
+/// 3. Key strengthening
+/// 4. Security metrics (NPCR, UACI)
+class EnhancedEncryptionService extends EncryptionService {
+  final int encryptionRounds;
+
+  EnhancedEncryptionService({this.encryptionRounds = 2});
+
+  /// Multi-round encryption with salt integration
+  Uint8List encryptBytesWithSalt({
+    required Uint8List dataBytes,
+    required Uint8List key,
+    required Uint8List salt,
+  }) {
+    if (dataBytes.isEmpty) return Uint8List(0);
+    EncryptionService._assertKey(key);
+
+    // Strengthen key with salt
+    final strengthenedKey = _strengthenKeyWithSalt(key, salt);
+
+    // Apply multiple rounds
+    var encrypted = dataBytes;
+    for (int round = 0; round < encryptionRounds; round++) {
+      final roundKey = _deriveRoundKey(strengthenedKey, round);
+      encrypted = encryptBytes(dataBytes: encrypted, key: roundKey);
+    }
+
+    return encrypted;
+  }
+
+  /// Multi-round decryption with salt
+  Uint8List decryptBytesWithSalt({
+    required Uint8List encryptedBytes,
+    required Uint8List key,
+    required Uint8List salt,
+  }) {
+    if (encryptedBytes.isEmpty) return Uint8List(0);
+    EncryptionService._assertKey(key);
+
+    // Strengthen key with salt
+    final strengthenedKey = _strengthenKeyWithSalt(key, salt);
+
+    // Apply decryption in reverse order
+    var decrypted = encryptedBytes;
+    for (int round = encryptionRounds - 1; round >= 0; round--) {
+      final roundKey = _deriveRoundKey(strengthenedKey, round);
+      decrypted = decryptBytes(encryptedBytes: decrypted, key: roundKey);
+    }
+
+    return decrypted;
+  }
+
+  /// Strengthen key by combining with salt using XOR and hash
+  Uint8List _strengthenKeyWithSalt(Uint8List key, Uint8List salt) {
+    final padded = _padKeyWithSalt(key, salt);
+    final strengthened = Uint8List(32);
+
+    // XOR-based mixing
+    for (int i = 0; i < 32; i++) {
+      strengthened[i] = padded[i] ^ padded[i + 32];
+      // Add salt entropy
+      if (salt.isNotEmpty) {
+        strengthened[i] ^= salt[i % salt.length];
+      }
+    }
+
+    return strengthened;
+  }
+
+  /// Derive key for specific round
+  Uint8List _deriveRoundKey(Uint8List baseKey, int round) {
+    final derived = Uint8List(32);
+    for (int i = 0; i < 32; i++) {
+      derived[i] = (baseKey[i] + round * 17 + i * 31) & 0xFF;
+    }
+    return derived;
+  }
+
+  /// Pad key to 64 bytes for salt combination
+  Uint8List _padKeyWithSalt(Uint8List key, Uint8List salt) {
+    final padded = Uint8List(64);
+    padded.setAll(0, key);
+    if (salt.isNotEmpty) {
+      padded.setAll(32, List.generate(32, (i) => salt[i % salt.length]));
+    }
+    return padded;
+  }
+
+  /// Calculate NPCR (Number of Pixels Change Rate) -measure of sensitivity
+  /// Changes in plaintext should affect ~50% of ciphertext bits
+  double calculateNPCR(Uint8List plaintext1, Uint8List plaintext2,
+      Uint8List key) {
+    final cipher1 = encryptBytes(dataBytes: plaintext1, key: key);
+    final cipher2 = encryptBytes(dataBytes: plaintext2, key: key);
+
+    if (cipher1.length != cipher2.length) return 0.0;
+
+    int differentBytes = 0;
+    for (int i = 0; i < cipher1.length; i++) {
+      if (cipher1[i] != cipher2[i]) differentBytes++;
+    }
+
+    return (differentBytes / cipher1.length) * 100.0; // Percentage
+  }
+
+  /// Calculate UACI (Unified Average Changing Intensity) - effect magnitude
+  double calculateUACI(Uint8List plaintext1, Uint8List plaintext2,
+      Uint8List key) {
+    final cipher1 = encryptBytes(dataBytes: plaintext1, key: key);
+    final cipher2 = encryptBytes(dataBytes: plaintext2, key: key);
+
+    if (cipher1.length != cipher2.length) return 0.0;
+
+    double sum = 0.0;
+    for (int i = 0; i < cipher1.length; i++) {
+      sum += (cipher1[i] - cipher2[i]).abs();
+    }
+
+    return (sum / (cipher1.length * 255.0)) * 100.0; // Percentage
+  }
+
+  /// Verify encryption quality (NPCR should be ~99.6%, UACI should be ~33.5%)
+  EncryptionQualityReport evaluateEncryptionQuality(
+    Uint8List plaintext,
+    Uint8List key, {
+    int testSamples = 10,
+  }) {
+    double totalNPCR = 0.0;
+    double totalUACI = 0.0;
+
+    for (int i = 0; i < testSamples; i++) {
+      // Create modified plaintext (flip one bit)
+      final modified = Uint8List.fromList(plaintext);
+      final byteIndex = (i * 37) % plaintext.length;
+      final bitIndex = i % 8;
+      modified[byteIndex] ^= (1 << bitIndex); // Flip bit
+
+      totalNPCR += calculateNPCR(plaintext, modified, key);
+      totalUACI += calculateUACI(plaintext, modified, key);
+    }
+
+    return EncryptionQualityReport(
+      averageNPCR: totalNPCR / testSamples,
+      averageUACI: totalUACI / testSamples,
+      isHighQuality:
+          (totalNPCR / testSamples) > 99.0 && (totalUACI / testSamples) > 30.0,
+    );
+  }
+}
+
+/// Encryption quality metrics
+class EncryptionQualityReport {
+  final double averageNPCR;
+  final double averageUACI;
+  final bool isHighQuality;
+
+  EncryptionQualityReport({
+    required this.averageNPCR,
+    required this.averageUACI,
+    required this.isHighQuality,
+  });
+
+  @override
+  String toString() => '''
+EncryptionQualityReport(
+  NPCR: ${averageNPCR.toStringAsFixed(2)}% (ideal: 99.6%)
+  UACI: ${averageUACI.toStringAsFixed(2)}% (ideal: 33.5%)
+  Quality: ${isHighQuality ? 'HIGH' : 'LOW'}
+)''';
+}
